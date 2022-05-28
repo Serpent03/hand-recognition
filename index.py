@@ -34,6 +34,8 @@ orientationOutput = [] * 2
 
 raw_pitch = [0, ] * 10
 
+rawOrientationInput = [] * 18
+
 # { MEDIAPIPE HAND TRACKING PARAMETERS }
 
 mpHands = mp.solutions.hands
@@ -52,6 +54,10 @@ def masterController(arg):
         calibrate = True
 
 def averageProcessing():
+    global rawOrientationInput
+
+    rawOrientationInput.append( [ orientationInput[0] ] )
+
     avgX = (orientationInput[0].x + orientationInput[3].x + orientationInput[4].x + orientationInput[5].x + orientationInput[6].x + orientationInput[7].x + orientationInput[8].x + orientationInput[9].x + orientationInput[10].x + orientationInput[11].x +
             orientationInput[12].x + orientationInput[13].x + orientationInput[14].x + orientationInput[15].x + orientationInput[16].x + orientationInput[17].x + orientationInput[18].x + orientationInput[19].x + orientationInput[20].x) / 18
     avgY = (orientationInput[0].y + orientationInput[3].y + orientationInput[4].y + orientationInput[5].y + orientationInput[6].y + orientationInput[7].y + orientationInput[8].y + orientationInput[9].y + orientationInput[10].y + orientationInput[11].y +
@@ -107,7 +113,6 @@ def processRotation():
     i_pitch = interp(s_pitch[-1], [-40, 40], [-1, 1])
 
     orientationOutput = [ i_roll, i_pitch ]
-
     print(s_pitch[-1])
 
     # print(orientationOutput)
