@@ -24,10 +24,13 @@ captureDeviceRes = (640, 480)
 initialized = True
 calibrate = True
 
-orientationInput = [] * 3
+orientationInput = [0,] * 3
 xyz = [] * 3
 xyz_first = xyz
-orientationOutput = []
+orientationOutput = [0.5 , 0.5]
+
+raw_pitch = [0, ] * 3
+# s_pitch, s_roll, s_yaw = [0, ] * 3
 
 # { MEDIAPIPE HAND TRACKING PARAMETERS }
 
@@ -61,8 +64,8 @@ def rotation_matrix_from_vectors(vec1, vec2):
 def vectorize(orientationInp):
     vectors = [
         [orientationInp[3].x - orientationInp[0].x, orientationInp[3].y - orientationInp[0].y, orientationInp[3].z - orientationInp[0].z],
-        [orientationInp[8].x - orientationInp[0].x, orientationInp[8].y - orientationInp[0].y, orientationInp[8].z - orientationInp[0].z],
-        [orientationInp[19].x - orientationInp[0].x, orientationInp[19].y - orientationInp[0].y, orientationInp[19].z - orientationInp[0].z],
+        [orientationInp[5].x - orientationInp[0].x, orientationInp[5].y - orientationInp[0].y, orientationInp[5].z - orientationInp[0].z],
+        [orientationInp[17].x - orientationInp[3].x, orientationInp[17].y - orientationInp[3].y, orientationInp[17].z - orientationInp[3].z],
     ]
 
     return vectors
@@ -87,10 +90,22 @@ def rotFromMat():
     y3 = np.rad2deg(atan2(-rotMat3[2][0], sqrt(rotMat3[2][1] + rotMat3[2][2])))
     z3 = np.rad2deg(atan2(rotMat3[1][0], rotMat3[0][0]))
 
-    return [[x1, y1 ,z1], [x2, y2 ,z2], [x3, y3 ,z3]]
+    processed = integrateRotation([x1, y1 ,z1], [x2, y2 ,z2], [x3, y3 ,z3])
+    return processed
+
+def integrateRotation(rotation1, rotation2, rotation3):
+    # global s_pitch
+
+    pitch = (rotation1[2] + rotation2[2] + rotation3[2]) / 3
+    roll = -rotation3[0]
+
+    i_pitch = np.interp(pitch, [-15, 30], [0, 1])
+    i_roll = np.interp(roll, [-5, 5], [0, 1])
+    
+    return [i_pitch, i_roll]
 
 def outputVjoy():
-    r, p = -orientationOutput[0], orientationOutput[1]
+    p, r = orientationOutput[0], orientationOutput[1]
 
     joystickDevice.set_axis(pyvjoy.HID_USAGE_X, eval(hex(int(r * 32768))))
     joystickDevice.set_axis(pyvjoy.HID_USAGE_Y, eval(hex(int(p * 32768))))
@@ -107,11 +122,12 @@ def keyUpdate():
 keyUpdateThread = threading.Thread(target=keyUpdate)
 keyUpdateThread.start()
 
-rotationProcessThread = threading.Thread(target=rotFromMat)
-rotationProcessThread.start()
-
+# rotationProcessThread = threading.Thread(target=outputVjoy)
+# rotationProcessThread.start()
 
 # { MAIN PROGRAM }
+
+print()
 
 while initialized:
     success, img = captureDevice.read()
@@ -137,12 +153,14 @@ while initialized:
         xyz_first = xyz
         calibrate = False
     else:
-        orientationOutput = rotFromMat()
-        print(orientationOutput[0], "\r", end="")
-
+        try:
+            orientationOutput = rotFromMat()
+        except:
+            pass
+        print(orientationOutput[1], "\r", end="")
     # print(xyz)
 
-    # outputVjoy()
+    outputVjoy()
 
     cv2.imshow("Image", img)
     cv2.waitKey(1)
