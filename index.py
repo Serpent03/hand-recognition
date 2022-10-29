@@ -14,8 +14,11 @@ from scipy.signal import savgol_filter
 from cmath import cos, pi, sin
 from math import atan2, degrees, radians, sqrt
 
+from kalmanfilter import KalmanFilter
 
 # { PROGRAM CRITICAL DEFINITIONS }
+
+kf = KalmanFilter()
 
 joystickDevice = pyvjoy.VJoyDevice(1)
 captureDevice = cv2.VideoCapture(1)
@@ -96,11 +99,12 @@ def rotFromMat():
 def integrateRotation(rotation1, rotation2, rotation3):
     # global s_pitch
 
-    pitch = (rotation1[2] + rotation2[2] + rotation3[2]) / 3
+    pitch = (rotation1[2] + rotation2[2]) / 2
     roll = -rotation3[0]
 
-    i_pitch = np.interp(pitch, [-15, 30], [0, 1])
-    i_roll = np.interp(roll, [-5, 5], [0, 1])
+    s_pitch_roll = kf.predict(pitch, roll)
+    i_pitch = np.interp(s_pitch_roll[0], [-15, 15], [0, 1])
+    i_roll = np.interp(s_pitch_roll[1], [-10, 10], [0, 1])
     
     return [i_pitch, i_roll]
 
@@ -121,9 +125,6 @@ def keyUpdate():
 
 keyUpdateThread = threading.Thread(target=keyUpdate)
 keyUpdateThread.start()
-
-# rotationProcessThread = threading.Thread(target=outputVjoy)
-# rotationProcessThread.start()
 
 # { MAIN PROGRAM }
 
