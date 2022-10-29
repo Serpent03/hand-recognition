@@ -2,20 +2,17 @@
 
 # { IMPORTS }
 
-from concurrent.futures import process
 import cv2
 import mediapipe as mp
 import pyvjoy
 
-from pynput.keyboard import Key, Listener
 import threading
 
-from numpy import interp
+import numpy as np
 from scipy.signal import savgol_filter
 
 from cmath import cos, pi, sin
-from math import atan2, degrees, radians
-
+from math import atan2, degrees, radians, sqrt
 
 
 # { PROGRAM CRITICAL DEFINITIONS }
@@ -27,12 +24,10 @@ captureDeviceRes = (640, 480)
 initialized = True
 calibrate = True
 
-orientationInput = [] * 21
-xyz = [] * 6
+orientationInput = [] * 3
+xyz = [] * 3
 xyz_first = xyz
-orientationOutput = [] * 2
-
-raw_pitch = [0, ] * 10
+orientationOutput = []
 
 # { MEDIAPIPE HAND TRACKING PARAMETERS }
 
@@ -51,67 +46,48 @@ def masterController(arg):
     if arg == 'c':
         calibrate = True
 
-def averageProcessing():
-    avgX = (orientationInput[0].x + orientationInput[3].x + orientationInput[4].x + orientationInput[5].x + orientationInput[6].x + orientationInput[7].x + orientationInput[8].x + orientationInput[9].x + orientationInput[10].x + orientationInput[11].x +
-            orientationInput[12].x + orientationInput[13].x + orientationInput[14].x + orientationInput[15].x + orientationInput[16].x + orientationInput[17].x + orientationInput[18].x + orientationInput[19].x + orientationInput[20].x) / 18
-    avgY = (orientationInput[0].y + orientationInput[3].y + orientationInput[4].y + orientationInput[5].y + orientationInput[6].y + orientationInput[7].y + orientationInput[8].y + orientationInput[9].y + orientationInput[10].y + orientationInput[11].y +
-            orientationInput[12].y + orientationInput[13].y + orientationInput[14].y + orientationInput[15].y + orientationInput[16].y + orientationInput[17].y + orientationInput[18].y + orientationInput[19].y + orientationInput[20].y) / 18
-    avgZ = (orientationInput[0].z + orientationInput[3].z + orientationInput[4].z + orientationInput[5].z + orientationInput[6].z + orientationInput[7].z + orientationInput[8].z + orientationInput[9].z + orientationInput[10].z + orientationInput[11].z +
-            orientationInput[12].z + orientationInput[13].z + orientationInput[14].z + orientationInput[15].z + orientationInput[16].z + orientationInput[17].z + orientationInput[18].z + orientationInput[19].z + orientationInput[20].z) / 18
+def rotation_matrix_from_vectors(vec1, vec2):
+    a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
+    v = np.cross(a, b)
+    if any(v): #if not all zeros then 
+        c = np.dot(a, b)
+        s = np.linalg.norm(v)
+        kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+        return np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
 
-    posX = round(avgX * captureDeviceRes[0])
-    posY = round(avgY * captureDeviceRes[1])
+    else:
+        return np.eye(3) #cross of all zeros only occurs on identical directions
 
-    return (posX, posY, avgZ, avgX, avgY)
-    # print(f'{orientationInput[20]}')
-
-
-def IOROT(y, p, r):
-    matrix = [
-        [cos(y)*cos(p), cos(y)*sin(p)*sin(r) - sin(y) *
-        cos(r), cos(y)*sin(p)*cos(r) + sin(y)*sin(r)],
-        [sin(y)*cos(p), sin(y)*sin(p)*sin(r) - cos(y) *
-        cos(r), sin(y)*sin(p)*cos(r) - cos(y)*sin(r)],
-        [-sin(p), cos(p)*sin(r), cos(p)*cos(r)],
+def vectorize(orientationInp):
+    vectors = [
+        [orientationInp[3].x - orientationInp[0].x, orientationInp[3].y - orientationInp[0].y, orientationInp[3].z - orientationInp[0].z],
+        [orientationInp[8].x - orientationInp[0].x, orientationInp[8].y - orientationInp[0].y, orientationInp[8].z - orientationInp[0].z],
+        [orientationInp[19].x - orientationInp[0].x, orientationInp[19].y - orientationInp[0].y, orientationInp[19].z - orientationInp[0].z],
     ]
 
-    realComp = [
-        [], [], []
-    ]
+    return vectors
 
-    for i in range(len(matrix)):
-        for j in matrix[i]:
-            realComp[i].append(j.real)
+def rotFromMat():
+    originalVectors = xyz_first
+    transformedVectors = xyz
 
-    return [
-        atan2(realComp[1][0], realComp[0][0]),
-        atan2(-realComp[2][0], ((realComp[2][1])
-              ** 2 + (realComp[2][2])**2)**1/2),
-        atan2(realComp[2][1], realComp[2][2])
-    ]
+    rotMat1 = rotation_matrix_from_vectors(originalVectors[0], transformedVectors[0])
+    rotMat2 = rotation_matrix_from_vectors(originalVectors[1], transformedVectors[1])
+    rotMat3 = rotation_matrix_from_vectors(originalVectors[2], transformedVectors[2])
 
+    x1 = np.rad2deg(atan2(rotMat1[2][1], rotMat1[2][2]))
+    y1 = np.rad2deg(atan2(-rotMat1[2][0], sqrt(rotMat1[2][1] + rotMat1[2][2])))
+    z1 = np.rad2deg(atan2(rotMat1[1][0], rotMat1[0][0]))
 
-def processRotation():
-    global orientationOutput
-    # make up a mechanism for getting out the degrees moved from position
-    # print(
-    #     f"delta X: {xyz[0] - xyz_first[0]}\ndelta Y: {xyz[1] - xyz_first[1]}\ndelta Z: {xyz[2] - xyz_first[2]}",  end="\r", flush=True)
+    x2 = np.rad2deg(atan2(rotMat2[2][1], rotMat2[2][2]))
+    y2 = np.rad2deg(atan2(-rotMat2[2][0], sqrt(rotMat2[2][1] + rotMat2[2][2])))
+    z2 = np.rad2deg(atan2(rotMat2[1][0], rotMat2[0][0]))
 
-    if len(raw_pitch) >= 60:
-        raw_pitch[:-10] = []
+    x3 = np.rad2deg(atan2(rotMat3[2][1], rotMat3[2][2]))
+    y3 = np.rad2deg(atan2(-rotMat3[2][0], sqrt(rotMat3[2][1] + rotMat3[2][2])))
+    z3 = np.rad2deg(atan2(rotMat3[1][0], rotMat3[0][0]))
 
-    raw_pitch.append(xyz[1] - xyz_first[1])
-    s_pitch = savgol_filter(raw_pitch, len(raw_pitch)-1, 1) # smooth pitch 
-
-    i_roll = interp(xyz[0] - xyz_first[0], [-25, 25], [-1, 1])
-    i_pitch = interp(s_pitch[-1], [-40, 40], [-1, 1])
-
-    orientationOutput = [ i_roll, i_pitch ]
-
-    print(s_pitch[-1])
-
-    # print(orientationOutput)
-
+    return [[x1, y1 ,z1], [x2, y2 ,z2], [x3, y3 ,z3]]
 
 def outputVjoy():
     r, p = -orientationOutput[0], orientationOutput[1]
@@ -131,11 +107,9 @@ def keyUpdate():
 keyUpdateThread = threading.Thread(target=keyUpdate)
 keyUpdateThread.start()
 
-# rotationProcessThread = threading.Thread(target=processRotation)
-# rotationProcessThread.start()
+rotationProcessThread = threading.Thread(target=rotFromMat)
+rotationProcessThread.start()
 
-# handUpdate = threading.Thread(target=handUpdate, args=cameraUpdate())
-# handUpdate.start()
 
 # { MAIN PROGRAM }
 
@@ -157,19 +131,18 @@ while initialized:
     except:
         pass
 
-    xyz = averageProcessing()
+    xyz = vectorize(orientationInput)
 
     if calibrate:
         xyz_first = xyz
         calibrate = False
+    else:
+        orientationOutput = rotFromMat()
+        print(orientationOutput[0], "\r", end="")
 
-    cv2.circle(img, (xyz_first[0], xyz_first[1]), 15, (0, 255, 0), cv2.FILLED)
-    cv2.circle(img, (xyz[0], xyz[1]), 15, (255, 0, 0), cv2.FILLED)
-    cv2.line(img, (xyz[0], xyz[1]), (xyz_first[0], xyz_first[1]), (0, 0, 255), 2)
+    # print(xyz)
 
-
-    processRotation()
-    outputVjoy()
+    # outputVjoy()
 
     cv2.imshow("Image", img)
     cv2.waitKey(1)
