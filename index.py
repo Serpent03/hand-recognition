@@ -66,9 +66,9 @@ def rotation_matrix_from_vectors(vec1, vec2):
 
 def vectorize(orientationInp):
     vectors = [
-        [orientationInp[3].x - orientationInp[0].x, orientationInp[3].y - orientationInp[0].y, orientationInp[3].z - orientationInp[0].z],
-        [orientationInp[5].x - orientationInp[0].x, orientationInp[5].y - orientationInp[0].y, orientationInp[5].z - orientationInp[0].z],
-        [orientationInp[17].x - orientationInp[3].x, orientationInp[17].y - orientationInp[3].y, orientationInp[17].z - orientationInp[3].z],
+        [orientationInp[3].x - orientationInp[17].x, orientationInp[3].y - orientationInp[17].y, orientationInp[3].z - orientationInp[17].z],
+        [orientationInp[4].x - orientationInp[17].x, orientationInp[4].y - orientationInp[17].y, orientationInp[4].z - orientationInp[17].z],
+        [orientationInp[7].x - orientationInp[17].x, orientationInp[7].y - orientationInp[17].y, orientationInp[7].z - orientationInp[17].z],
     ]
 
     return vectors
@@ -99,12 +99,14 @@ def rotFromMat():
 def integrateRotation(rotation1, rotation2, rotation3):
     # global s_pitch
 
-    pitch = (rotation1[2] + rotation2[2]) / 2
-    roll = -rotation3[0]
+    pitch = (rotation1[2] + rotation2[2] + rotation3[2]) / 3
+    roll = -1 * ((rotation3[0] + rotation2[0] + rotation1[0]) / 3)
+
+    print(roll, "\r", end="")
 
     s_pitch_roll = kf.predict(pitch, roll)
     i_pitch = np.interp(s_pitch_roll[0], [-15, 15], [0, 1])
-    i_roll = np.interp(s_pitch_roll[1], [-10, 10], [0, 1])
+    i_roll = np.interp(s_pitch_roll[1], [-15, 15], [0, 1])
     
     return [i_pitch, i_roll]
 
@@ -115,7 +117,7 @@ def outputVjoy():
     joystickDevice.set_axis(pyvjoy.HID_USAGE_Y, eval(hex(int(p * 32768))))
 
 def keyUpdate():
-    key = input()
+    key = input().lower()
     masterController(key)
     if not initialized:
         exit
@@ -158,7 +160,7 @@ while initialized:
             orientationOutput = rotFromMat()
         except:
             pass
-        print(orientationOutput[1], "\r", end="")
+        # print(orientationOutput[1], "\r", end="")
     # print(xyz)
 
     outputVjoy()
