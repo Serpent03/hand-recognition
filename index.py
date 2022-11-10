@@ -32,8 +32,8 @@ xyz = [] * 3
 xyz_first = xyz
 orientationOutput = [0.5 , 0.5]
 
-raw_pitch = [0, ] * 3
-# s_pitch, s_roll, s_yaw = [0, ] * 3
+raw_roll = []
+raw_pitch = []
 
 # { MEDIAPIPE HAND TRACKING PARAMETERS }
 
@@ -97,16 +97,26 @@ def rotFromMat():
     return processed
 
 def integrateRotation(rotation1, rotation2, rotation3):
-    # global s_pitch
+    global raw_roll, raw_pitch
 
     pitch = (rotation1[2] + rotation2[2] + rotation3[2]) / 3
     roll = -1 * ((rotation3[0] + rotation2[0] + rotation1[0]) / 3)
+    raw_roll.append(roll)
+    raw_pitch.append(pitch)
+    s_roll = roll
+    s_pitch = pitch
 
-    print(roll, "\r", end="")
+    # much wow, such simple.. why skip the input for averaging? we'll just do it like we did it in the savgol filter. keep it running and draw again.
+    if len(raw_roll) >= 10:
+        s_roll = (raw_roll[-1] + raw_roll[-2] + raw_roll[-3] + raw_roll[-4] + raw_roll[-5] + raw_roll[-6] + raw_roll[-7] + raw_roll[-8] + raw_roll[-9] + raw_roll[-10]) / 10
+    if len(raw_pitch) >= 10:
+        s_pitch = (raw_pitch[-1] + raw_pitch[-2] + raw_pitch[-3] + raw_pitch[-4] + raw_pitch[-5] + raw_pitch[-6] + raw_pitch[-7] + raw_pitch[-8] + raw_pitch[-9] + raw_pitch[-10]) / 10
 
-    s_pitch_roll = kf.predict(pitch, roll)
+    print(round(roll, 2), "  ", round(s_roll, 2), "    \r", end="")
+
+    s_pitch_roll = kf.predict(s_pitch, s_roll)
     i_pitch = np.interp(s_pitch_roll[0], [-15, 15], [0, 1])
-    i_roll = np.interp(s_pitch_roll[1], [-15, 15], [0, 1])
+    i_roll = np.interp(s_pitch_roll[1], [-15, 10], [0, 1])
     
     return [i_pitch, i_roll]
 
