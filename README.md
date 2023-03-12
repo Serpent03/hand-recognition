@@ -2,11 +2,11 @@
 
 This is a simple application that utilizes python to compute the orientation of a hand, through the help of a web camera, and then feed that rotational information into two [vJoy](https://github.com/shauleiz/vJoy/) joystick axes, namely the X and Y.
 
-Demonstration: https://www.youtube.com/watch?v=u8fZfTvuQq0
-
 This can have several utilities, but the main purpose of this program is to replace HOTAS sets or other peripherals with only hands. 
 
 I am currently able to do a very short duration aerial refueling with the current algorithm. 
+
+Demonstration: https://www.youtube.com/watch?v=u8fZfTvuQq0
 
 # Modules Used
 [cv2](https://pypi.org/project/opencv-python/) for operating the camera.
