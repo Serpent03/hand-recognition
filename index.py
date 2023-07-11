@@ -135,7 +135,7 @@ def keyUpdate():
         keyUpdate()
 
 
-keyUpdateThread = threading.Thread(target=keyUpdate)
+keyUpdateThread = threading.Thread(target = keyUpdate)
 keyUpdateThread.start()
 
 # { MAIN PROGRAM }
