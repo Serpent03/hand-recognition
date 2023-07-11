@@ -107,16 +107,16 @@ def integrateRotation(rotation1, rotation2, rotation3):
     s_pitch = pitch
 
     # much wow, such simple.. why skip the input for averaging? we'll just do it like we did it in the savgol filter. keep it running and draw again.
-    if len(raw_roll) >= 10:
-        s_roll = (raw_roll[-1] + raw_roll[-2] + raw_roll[-3] + raw_roll[-4] + raw_roll[-5] + raw_roll[-6] + raw_roll[-7] + raw_roll[-8] + raw_roll[-9] + raw_roll[-10]) / 10
-    if len(raw_pitch) >= 10:
-        s_pitch = (raw_pitch[-1] + raw_pitch[-2] + raw_pitch[-3] + raw_pitch[-4] + raw_pitch[-5] + raw_pitch[-6] + raw_pitch[-7] + raw_pitch[-8] + raw_pitch[-9] + raw_pitch[-10]) / 10
+    if len(raw_roll) >= 7:
+        s_roll = (raw_roll[-1] + raw_roll[-2] + raw_roll[-3] + raw_roll[-4] + raw_roll[-5] + raw_roll[-6] + raw_roll[-7]) / 7
+    if len(raw_pitch) >= 7:
+        s_pitch = (raw_pitch[-1] + raw_pitch[-2] + raw_pitch[-3] + raw_pitch[-4] + raw_pitch[-5] + raw_pitch[-6] + raw_pitch[-7]) / 7
 
     print(round(roll, 2), "  ", round(s_roll, 2), "    \r", end="")
 
     s_pitch_roll = kf.predict(s_pitch, s_roll)
-    i_pitch = np.interp(s_pitch_roll[0], [-15, 15], [0, 1])
-    i_roll = np.interp(s_pitch_roll[1], [-15, 10], [0, 1])
+    i_pitch = np.interp(s_pitch_roll[0], [-20, 20], [0, 1])
+    i_roll = np.interp(s_pitch_roll[1], [-15, 15], [0, 1])
     
     return [i_pitch, i_roll]
 
