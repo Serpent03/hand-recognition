@@ -2,6 +2,11 @@
 # perhaps routing through vJoy.. ?
 # also a possible avenue -> can we use hand motion macros to improve hand motion timings ..?
 
+########## ########## ########## DEPRECATED ########## ########## ##########
+########## ########## ########## DEPRECATED ########## ########## ##########
+########## ########## ########## DEPRECATED ########## ########## ##########
+########## ########## ########## DEPRECATED ########## ########## ##########
+
 import time
 # use this for the matrix transformation
 from cmath import cos, pi, sin
